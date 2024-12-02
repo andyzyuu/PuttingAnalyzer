@@ -80,6 +80,7 @@ def onAppStart(app):
     
     app.overallScore = None
     app.algorithmCalculated = False
+    app.ratingColor = None
     
     app.count = 0
 def onStep(app):
@@ -112,7 +113,15 @@ def onStep(app):
         app.out.write(frame)
     if app.keyPointsFilled == True and app.algorithmCalculated == False:
         algorithm(app, app.allDots)
-    
+    if app.algorithmCalculated == True:
+        if app.overallScore < 50:
+            app.ratingColor = 'red'
+        elif app.overallScore < 75:
+            app.ratingColor = 'orange'
+        elif app.overallScore < 85:
+            app.ratingColor = 'yellow'
+        else:
+            app.ratingColor = 'green'
 def redrawAll(app):
     if not app.live and not app.useVideo:
         drawLabel("Welcome to Putting Analysis", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
@@ -153,8 +162,8 @@ def redrawAll(app):
     # if app.keyPointsFilled:
     #     drawLabel('Result of ')
     if app.keyPointsFilled and app.algorithmCalculated:
-        drawLabel(f"Rating: {app.overallScore}", 200, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-        drawLabel("Click 'x' to reset", 200, 80, font='montserrat', size=42, border='white', borderWidth=1.5)
+        drawLabel(f"Rating: {app.overallScore}", 735, 35, font='montserrat', size=42, border=app.ratingColor, borderWidth=1.7)
+        drawLabel("Click 'x' to reset and import another video or record a live video", 735, 80, font='montserrat', size=42, border='white', borderWidth=1.5)
     for i in range(len(app.dots)):
         drawCircle(app.dots[i][0], app.dots[i][1], 8, fill='red', border='black')
         
@@ -198,8 +207,6 @@ def onMousePress(app, mouseX, mouseY):
     
     if not app.live and not app.useVideo:
         if app.importRectX - app.greenRectWidth / 2 < mouseX < app.importRectX + app.greenRectWidth / 2 and app.importRectY - app.greenRectHeight / 2 < mouseY < app.importRectY + app.greenRectHeight / 2:
-            # openFileDialog(app)
-            # openFile()
             temp = new()
             app.importedFile = fileFilter(temp)
             app.useVideo = True
@@ -264,12 +271,6 @@ def algorithm(app, listPoints):
     app.overallScore = (algHelper(topLeftList, 0) + algHelper(bottomLeftList, 1) + algHelper(topRightList, 2) + algHelper(bottomRightList, 3)) / 4
     app.algorithmCalculated = True
     
-    # setupTL = topLeftList[0]
-    # setupBL = bottomLeftList[0]
-    # setupTR = topRightList[0]
-    # setupBR = bottomRightList[0]
-    
-    # for i in range(len(topLeftList)):
         
 def sortByX(point):
     return point[0]
@@ -300,38 +301,43 @@ def algHelper(coordinates, cycle):
         yNorm = (yN - yN.mean()) / yN.std()
         quadratic = np.polyfit(xNorm, yNorm, 2)
         arcHeight = abs(quadratic[0]) # first coeiff. of the quadratic, captures most of the curve-ness of the arc
+        # idealMean = 0.12
         if cycle == 0:
-            idealMinArc = 0.25 # Top left
-            idealMaxArc = 0.7 # Top left
-            idealMean = (idealMinArc + idealMaxArc) / 2
+            # idealMinArc = 0.25 # Top left
+            # idealMaxArc = 0.7 # Top left
+            # idealMean = (idealMinArc + idealMaxArc) / 2
+            idealMean = 0.0445 # Value chosen based on ideal arc for top left keypoint
         elif cycle == 1:
-            idealMinArc = 0.02 # Bottom left
-            idealMaxArc = 1.94 # Bottom left
-            idealMean = (idealMinArc + idealMaxArc) / 2
+            # idealMinArc = 0.02 # Bottom left
+            # idealMaxArc = 1.94 # Bottom left
+            # idealMean = (idealMinArc + idealMaxArc) / 2
+            idealMean = 0.086 # Value chosen based on ideal arc for bottom left keypoint
         elif cycle == 2:
-            idealMinArc = 0.0003 # Top Right
-            idealMaxArc = 0.29 # Top Right
-            idealMean = (idealMinArc + idealMaxArc) / 2
+            # idealMinArc = 0.0003 # Top Right
+            # idealMaxArc = 0.29 # Top Right
+            # idealMean = (idealMinArc + idealMaxArc) / 2
+            idealMean = 0.062 # Value chosen based on ideal arc for top right keypoint 
         elif cycle == 3:
-            idealMinArc = 0.065 # Bottom Right
-            idealMaxArc = 0.75 # Bottom Right
-            idealMean = (idealMinArc + idealMaxArc) / 2
+            # idealMinArc = 0.065 # Bottom Right
+            # idealMaxArc = 0.75 # Bottom Right
+            # idealMean = (idealMinArc + idealMaxArc) / 2
+            idealMean = 0.3 # Value chosen based on ideal arc for bottom right keypoint 
         print('Ideal Mean: ' + str(idealMean))
         print('Arc Height' + str(arcHeight))
-        return 100 - abs(idealMean - arcHeight) * 45
-        if arcHeight < idealMinArc:
-            return 100 - (idealMinArc - arcHeight) * 100 # scaling the differences
-        elif arcHeight > idealMaxArc:
-            return 100 - (arcHeight - idealMaxArc) * 100 
-        else:
-            return 100
+        return 100 - abs(idealMean - arcHeight) * 500
+        # if arcHeight < idealMinArc:
+        #     return 100 - (idealMinArc - arcHeight) * 100 # scaling the differences
+        # elif arcHeight > idealMaxArc:
+        #     return 100 - (arcHeight - idealMaxArc) * 100 
+        # else:
+        #     return 100
     # print(impactPointIndex)
     # print(xCoordinates[:impactPointIndex])
     # print(yCoordinates[:impactPointIndex])
     postImpactArcConsistency = arcConsistency(xCoordinates[:impactPointIndex], yCoordinates[:impactPointIndex])
     preImpactArcConsistency = arcConsistency(xCoordinates[impactPointIndex:], yCoordinates[impactPointIndex:])
 
-    overallArcConsistency = 100 - abs(postImpactArcConsistency - preImpactArcConsistency)
+    overallArcConsistency = 100 - abs(postImpactArcConsistency - preImpactArcConsistency) # Work in progress
     
     setupCoords = coordinates[0]
     impactSetupEuclidean = np.sqrt((setupCoords[0] - impactPointCoords[0])**2 + (setupCoords[1] - impactPointCoords[1])**2)
@@ -356,21 +362,6 @@ def algHelper(coordinates, cycle):
     print(coordinates)
     return rounded(max(min(overallScore, 100), 0))
 
-# def findImpactPoint(coordinates):
-#     minY = float('inf') # Makes sure that the first value is always min_y, and goes past the initial decrease from backstroke to forwardstroke
-#     minYIndex = 0
-#     for i, (x, y) in enumerate(coordinates):
-#         if y < minY:
-#             print('!!!!!')
-#             minY = y
-#             minYIndex = i
-#             print(minY)
-#             print(minYIndex)
-#         elif y > minY: # When stroke comes back to impact, return the coordinate
-#             print(y)
-#             print(minY)
-#             return coordinates[minYIndex]
-#     return None
 def findImpactPoint(coordinates): #debugged
     setupY = coordinates[0][1]
     for i, (x, y) in enumerate(coordinates):
@@ -378,11 +369,9 @@ def findImpactPoint(coordinates): #debugged
             return coordinates[i]
 
 def new():
-    file_path = subprocess.check_output(["osascript", "-e", 'choose file']).decode("utf-8").strip()
-    return file_path
-    # if file_path:
-    #     print("Selected file:", file_path)
-    
+    filePath = subprocess.check_output(["osascript", "-e", 'choose file']).decode("utf-8").strip()
+    return filePath
+  
 def fileFilter(file):
     counter = 0
     result = ''
