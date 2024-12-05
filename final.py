@@ -1,36 +1,29 @@
+# Citation: Background Image Link: https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.hjgt.org%2Fblog%2Fhelpful-tip-tuesday-putting-golf%2F&psig=AOvVaw3NsWEDBimUyujNVApcovY2&ust=1733277390602000&source=images&cd=vfe&opi=89978449&ved=0CBcQjhxqFwoTCNjTuMu_iooDFQAAAAAdAAAAABAQ
 # Citation: https://www.youtube.com/watch?v=Jvf5y21ZqtQ&list=PLQVvvaa0QuDdttJXlLtAJxJetJcqmqlQq&ab_channel=sentdex partially inspired for cv2 info
 # Citation: cv2 to pil to CMU image info drawn from demo-pil-scaling.py from CS Academy
 # Citation: cv2 to pil to CMU Graphics image functionality inspired/outlined by TA Jason Niow
+# Citation: cv2 frame count knowledge from cv2 documentation: https://docs.opencv.org/4.x/d4/d15/group__videoio__flags__base.html#ggaeb8dd9c89c10a5c63c139bf7c4f5704dadadc646b31cfd2194794a3a80b8fa6c2
 # Citation: Sorting using key parameter: https://www.geeksforgeeks.org/python-sorted-function/
 # Citation: Enumerate function understanding: https://www.geeksforgeeks.org/enumerate-in-python/
 # Citation: Polyfit understanding: https://www.youtube.com/watch?v=Dggl0fJJ81k&ab_channel=AdamGaweda and https://www.geeksforgeeks.org/numpy-poly1d-in-python/
 # Citation: .index understanding: https://www.w3schools.com/python/ref_list_index.asp
 # Citation: Euclidean distance formula (for calculating deviation of impact versus setup keypoints): https://www.cuemath.com/euclidean-distance-formula/#:~:text=The%20Euclidean%20distance%20formula%20is%20used%20to%20find%20the%20length,right%2Dangled%20triangle%2C%20etc.
-# Citation: scipy interpolation understanding: https://www.youtube.com/watch?v=0bwVFBAZ7TI&ab_channel=CodingSpecs
+# Citation: scipy interpolation understanding: https://www.youtube.com/watch?v=0bwVFBAZ7TI&ab_channel=CodingSpecs # Note: Not applied in final algorithm due to bugs
 # Citation: Perplexity AI for conceptual linkage of what libraries to use keypoints: Prompt: What library for math functions and interpolations?
-# Citation: Function of new() using subprocess to allow user to open file: Google Generative AI - "subprocess: This allows you to run external commands. The code snippet runs an AppleScript command to open Finder's file selection dialog.""
 # Citation: Z-score normalization: https://www.slingacademy.com/article/how-to-use-numpy-for-data-normalization-and-preprocessing/#standardization-(z-score-normalization)
+# Citation: Using os listdir to allow user to choose a file (that leads to file path and thus ability to read video file): https://www.geeksforgeeks.org/python-os-listdir-method/
 # Ideal arc points linked: https://docs.google.com/document/d/1vbDf5ALQ6wf6Xe71ibur57L3CAqePQ7yNkYGF7oR0rw/edit?usp=sharing
-from pathlib import Path
+import os
 import cv2
 from cmu_graphics import *
 from PIL import Image
-import tkinter as tk
-from tkinter import Tk, filedialog
-from scipy.interpolate import interp1d
+from urllib.request import urlopen
+# from scipy.interpolate import interp1d
 import numpy as np
-import easygui
-import sys
-import subprocess
-# import sys
-# print(sys.executable)
-# print(sys.path)
-
-
-# recording = False
-# recorded = False
 
 def onAppStart(app):
+    app.bgPILImage = (Image.open(urlopen('https://www.hjgt.org/wp-content/uploads/2024/02/Putting.jpg')))
+    app.bgImage = CMUImage(app.bgPILImage.resize((1470, 891)))
     app.capLive = cv2.VideoCapture(0)
     app.importedFile = None
     app.capImport = cv2.VideoCapture(app.importedFile)
@@ -76,15 +69,46 @@ def onAppStart(app):
     app.liveRectX = 1102
     app.liveRectY = 540
     
+    app.redBackX = 70
+    app.redBackY = 750
+    app.redBackWidth = 225
+    app.redBackHeight = 100
     
+    app.helpX = 735
+    app.helpY = 750
+    app.helpWidth = 200
+    app.helpHeight = 100
     
     app.overallScore = None
     app.algorithmCalculated = False
     app.ratingColor = None
     
     app.count = 0
+    
+    app.length = None
+    app.mp4List = None
+    app.wantToOpen = False
+    app.panelOpened = False
+    app.chosen = False
+    app.helpOpen = False
+    
+    app.postImpactArcTL = None
+    app.postImpactArcBL = None
+    app.postImpactArcTR = None
+    app.postImpactArcBR = None
+    
+    
+    app.preImpactArcTL = None
+    app.preImpactArcBL = None
+    app.preImpactArcTR = None
+    app.preImpactArcBR = None
+    
+    app.impactSetupComparsonTL = None
+    app.impactSetupComparsonBL = None
+    app.impactSetupComparsonTR = None
+    app.impactSetupComparsonBR = None
+    
 def onStep(app):
-    # frame = cv2.imread(app.cap)
     if app.useVideo == True and app.copied == False:
         app.videoPath = f'''{app.importedFile}'''
 
@@ -93,13 +117,14 @@ def onStep(app):
         for frame in app.pilFrames:
             app.frames.append(CMUImage(frame))
             app.copied = True
-        app.recorded = True
+        # app.recorded = True
     if app.replaying == False and app.live == True:
         ret, frame = app.capLive.read()
         # print(frame)
         colorFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pilFrame = Image.fromarray(colorFrame)
         app.frame = CMUImage(pilFrame)
+        
         
     if app.replaying == True and app.copied == False:
         app.videoPath = "/Users/andy/Term Project/finalOutput.mp4"
@@ -122,48 +147,124 @@ def onStep(app):
             app.ratingColor = 'yellow'
         else:
             app.ratingColor = 'green'
+            
 def redrawAll(app):
-    if not app.live and not app.useVideo:
+    if not app.live and not app.useVideo and not app.wantToOpen:
+        drawImage(app.bgImage, 0, 445, align='left')
         drawLabel("Welcome to Putting Analysis", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-        drawRect(app.importRectX, app.importRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center')
-        drawRect(app.liveRectX, app.liveRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center')
+        drawRect(app.importRectX, app.importRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
+        drawRect(app.liveRectX, app.liveRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
+        drawRect(app.helpX, app.helpY, app.helpWidth, app.helpHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
         drawLabel('Import Video', 257, 540, font='montserrat', size=42, border='white', borderWidth=1.5, align='left')
         drawLabel('Live Recording', 968, 540, font='montserrat', size=42, border='white', borderWidth=1.5, align='left')
-        drawLabel('Please choose between recording a live video or importing a video', 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
-        # print(app.width, app.height)
+        drawLabel('Help', 697, 750, font='montserrat', size=42, border='white', borderWidth=1.5, align='left')
+        drawLabel('Please choose between importing a video or recording a live video', 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
+      
+    if app.helpOpen: 
+        drawRect(0, 0, 1470, 891, fill='darkgreen')
+        drawLabel('Putting Analysis FAQ', 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+        drawLabel('Q: How to use Putting Analysis?', 22, 80, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('A: Using either imported files from the same file directory or using a live webcam, with the camera angled slightly down and ___ inches above the ground,', 735, 120, size=21, border='white', borderWidth=1.5)
+        drawLabel('and record your putting stroke. After, using your mouse, attach keypoints on the 4 corners of your putter head, doing it frame by frame until the video', 735, 150, size=21, border='white', borderWidth=1.5)
+        drawLabel('ends or when the stroke has ended, and your final rating will be outputted, from a rating of 0 to 100.', 735, 180, size=21, border='white', borderWidth=1.5)
+        drawLabel('Q: How does the algorithm work?', 22, 240, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('A: Using the keypoints inputted by the user, each point is separated into a top left, top right, bottom left, and bottom right keypoint. After doing so,', 735, 280, size=21, border='white', borderWidth=1.5)
+        drawLabel('the keypoints of each category are illustrated by a polynomial of the 2nd degree. Taking the coefficient of the highest degree variable, we can', 735, 310, size=21, border='white', borderWidth=1.5)
+        drawLabel('visualize the curve of the putter head, and using those values to calculate the impact location versus the setup, and the overall arc to an optimal one.', 735, 340, size=21, border='white', borderWidth=1.5)
+        drawLabel('Q: How is the feedback generated?', 22, 400, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('A: Using the information that the algorithm generates, we can have an approximate understanding of the weak points of your putting stroke, and thus is', 735, 440, size=21, border='white', borderWidth=1.5)
+        drawLabel('the software can specify the parts that may need particular improvement or focus.', 735, 470, size=21, border='white', borderWidth=1.5)
+        drawLabel('Q: How can we use the previous recording that we recorded', 22, 530, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('in order to analyze again?', 22, 570, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('''A: After clicking "Import Video" in the home page, you can then choose the mp4 file named "previousRecording.mp4" This mp4 will portray the previous''', 735, 610, size=21, border='white', borderWidth=1.5)
+        drawLabel('recording that was recorded within the software. Note that after recording again, that previous recording file will be replaced with a new recording.', 735, 640, size=21, border='white', borderWidth=1.5)
+        drawRect(app.redBackX, app.redBackY, app.redBackWidth, app.redBackHeight, fill='red', border='darkred', borderWidth=3)
+        drawLabel('Back', 180, 800, font='montserrat', size=42, border='white', borderWidth=1.5)     
+        
+    if app.wantToOpen:
+        drawRect(0, 0, 1470, 891, fill='darkgreen')
+        for i in range(app.length):
+            if i == 0:
+                drawRect(735, 100, 800, 691 / app.length, fill='green', align='center', border='lightgreen', borderWidth=1.5)
+                drawLabel(f'{app.mp4List[i]}', 735, 100 , font='montserrat', size=42, border='white', borderWidth=1.5, align='center')
+            else:
+                drawRect(735, 100 + (691 / app.length) * i, 800, 691 / app.length, fill='green', align='center', border='lightgreen', borderWidth=1.5)
+                drawLabel(f'{app.mp4List[i]}', 735, 100 + (691 / app.length) * i, font='montserrat', size=42, border='white', borderWidth=1.5, align='center')
+        
+        drawRect(app.redBackX, app.redBackY, app.redBackWidth, app.redBackHeight, fill='red', border='darkred', borderWidth=3)
+        drawLabel('Back', 180, 800, font='montserrat', size=42, border='white', borderWidth=1.5)
     if app.frame != None and not app.replaying and app.live:
         drawImage(app.frame, 0, 0)
         if not app.recording and not app.recorded:
             drawLabel("Press 's' to begin recording and 'e' to end recording", 700, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
     if app.recording:
         drawLabel("Recording... (press 'e' to end recording)", 410, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-    if app.recorded and not app.keyPointsFilled and not app.useVideo:
+    if app.recorded and not app.keyPointsFilled and not app.useVideo and not app.wantToOpen:
         drawLabel("Press 'r' to replay and draw keypoints on your putter", 700, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-    if app.recorded and not app.keyPointsFilled and app.useVideo:
+    if app.recorded and not app.keyPointsFilled and app.useVideo and not app.wantToOpen:
         if app.currentFrameIndex < len(app.frames) and app.allDots == []:
             drawImage(app.frames[app.currentFrameIndex], 0, 0)
-            drawLabel("Start by pressing 'n' until you find the frame before your putter begins to move and draw four keypoints on each corner", 735, 30, font='montserrat', size=25, border='white', borderWidth=1.5)
+            drawLabel("Start by pressing 'n' until you find the frame before ", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("your putter begins to move and draw four keypoints on each corner", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
         elif app.currentFrameIndex < len(app.frames):
             drawImage(app.frames[app.currentFrameIndex], 0, 0)
-            drawLabel("Click on each of the four corners of your putter and press 'n' for the next frame", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-            drawLabel("Press 'd' to finish once the stroke is complete", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
-        # drawLabel('Test', 410, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("Click on each of the four corners of your putter and press 'n' for the next frame," , 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("or press 'b' to remove your previous keypoint", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("Press 'd' to finish once the stroke is complete", 735, 110, font='montserrat', size=42, border='white', borderWidth=1.5)
 
-    if app.replaying and not app.keyPointsFilled:
+    if app.replaying and not app.keyPointsFilled and not app.wantToOpen:
     #     for frame in app.replayFrames:
     #         drawImage(frame, 0, 0)
         if app.currentFrameIndex < len(app.frames) and app.allDots == []:
             drawImage(app.frames[app.currentFrameIndex], 0, 0)
-            drawLabel("Start by pressing 'n' until you find the frame before your putter begins to move and draw four keypoints on each corner", 735, 30, font='montserrat', size=25, border='white', borderWidth=1.5)
+            drawLabel("Start by pressing 'n' until you find the frame before ", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("your putter begins to move and draw four keypoints on each corner", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
         elif app.currentFrameIndex < len(app.frames):
             drawImage(app.frames[app.currentFrameIndex], 0, 0)
-            drawLabel("Click on each of the four corners of your putter and press 'n' for the next frame", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-            drawLabel("Press 'd' to finish once the stroke is complete", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("Click on each of the four corners of your putter and press 'n' for the next frame," , 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("or press 'b' to remove your previous keypoint", 735, 70, font='montserrat', size=42, border='white', borderWidth=1.5)
+            drawLabel("Press 'd' to finish once the stroke is complete", 735, 110, font='montserrat', size=42, border='white', borderWidth=1.5)
     # if app.keyPointsFilled:
     #     drawLabel('Result of ')
     if app.keyPointsFilled and app.algorithmCalculated:
-        drawLabel(f"Rating: {app.overallScore}", 735, 35, font='montserrat', size=42, border=app.ratingColor, borderWidth=1.7)
-        drawLabel("Click 'x' to reset and import another video or record a live video", 735, 80, font='montserrat', size=42, border='white', borderWidth=1.5)
+        impactFeedback = None
+        postImpactArcFeedback = None
+        preImpactArcFeedback = None
+        drawImage(app.bgImage, 0, 445, align='left')
+        drawLabel("Press 'x' to reset and import another video or record a live video", 735, 865, font='montserrat', size=42, border='white', borderWidth=1.5)
+        drawLabel(f"Rating: ", 450, 185, font='montserrat', size=95, border=app.ratingColor, borderWidth=1.7, bold=True)
+        if app.ratingColor != 'yellow':
+            drawCircle(800, 185, 175, fill='dark' + app.ratingColor, opacity=75, border='black', borderWidth=2)
+        elif app.ratingColor == 'yellow':
+            drawCircle(800, 185, 175, fill='gold', opacity=75, border='black', borderWidth=2)
+        drawCircle(800, 185, 145, fill=app.ratingColor, opacity=50, border='black', borderWidth=1)
+        drawLabel(f"{app.overallScore}", 800, 185, font='montserrat', size=95, border=app.ratingColor, borderWidth=1.7, bold=True)
+        if app.impactSetupComparisonTL < 40 or app.impactSetupComparisonBL < 40 or app.impactSetupComparisonTR < 40 or app.impactSetupComparisonBR < 40 and impactFeedback == None:
+            impactFeedback = 'very poor, and we would suggest to make sure you are hitting the ball in the middle of the putter face.'
+        elif app.impactSetupComparisonTL < 75 or app.impactSetupComparisonBL < 75 or app.impactSetupComparisonTR < 75 or app.impactSetupComparisonBR < 75 and impactFeedback == None:
+            impactFeedback = 'mediocre, and we would suggest to look at your impact position.'
+        elif app.impactSetupComparisonTL < 100 or app.impactSetupComparisonBL < 100 or app.impactSetupComparisonTR < 100 or app.impactSetupComparisonBR < 100 and impactFeedback == None:
+            impactFeedback = 'great!'
+        if app.postImpactArcTL < 0 or app.postImpactArcBL < 0 or app.postImpactArcTR < 0 or app.postImpactArcBR < 0 and postImpactArcFeedback == None:
+            postImpactArcFeedback = 'very poor, and we would suggest you focus on the consistency of the forwardstroke arc.'
+        elif app.postImpactArcTL < 60 or app.postImpactArcBL < 60 or app.postImpactArcTR < 60 or app.postImpactArcBR < 60 and postImpactArcFeedback == None:
+            postImpactArcFeedback = 'mediocre, and we would suggest to continue to pay attention to the forwardstroke arc.'
+        elif app.postImpactArcTL < 100 or app.postImpactArcBL < 100 or app.postImpactArcTR < 100 or app.postImpactArcBR < 100 and postImpactArcFeedback == None:
+            postImpactArcFeedback = 'great!'
+        if app.preImpactArcTL < 0 or app.preImpactArcBL < 0 or app.preImpactArcTR < 0 or app.preImpactArcBR < 0 and preImpactArcFeedback == None:
+            preImpactArcFeedback = 'very poor, and we would suggest you focus on the consistency of the backstroke arc.'
+        elif app.preImpactArcTL < 60 or app.preImpactArcBL < 60 or app.preImpactArcTR < 60 or app.preImpactArcBR < 60 and preImpactArcFeedback == None:
+            preImpactArcFeedback = 'mediocre, and we would suggest to continue to pay attention to the backstroke arc.'
+        elif app.preImpactArcTL < 100 or app.preImpactArcBL < 100 or app.preImpactArcTR < 100 or app.preImpactArcBR < 100 and preImpactArcFeedback == None:
+            preImpactArcFeedback = 'great!'     
+        drawLabel('Feedback: Based on the keypoints inputted, your pre-impact arc was...', 25, 470, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)  
+        drawLabel(f"{preImpactArcFeedback}", 25, 510, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True) 
+        drawLabel(f"In addition, your post-impact arc was...", 25, 550, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)
+        drawLabel(f"{postImpactArcFeedback}", 25, 590, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)
+        drawLabel(f"Finally, your impact position was...", 25, 630, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)
+        drawLabel(f"{impactFeedback}", 25, 670, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)
+        drawLabel("Good job and keep practicing!", 25, 710, align='left', font='montserrat', size=37, border='white', borderWidth=1.5, bold=True)
+        # Note: Pre-impact and backstroke are synonyms, and so are post-impact and forwardstroke
     for i in range(len(app.dots)):
         drawCircle(app.dots[i][0], app.dots[i][1], 8, fill='red', border='black')
         
@@ -180,6 +281,7 @@ def onKeyPress(app, key):
     if key == 'r' and app.recorded:
         print('Replaying recording')
         app.capLive.release()
+        copyVideo(app, "/Users/andy/Term Project/finalOutput.mp4", "/Users/andy/Term Project/previousRecording.mp4")
         # app.replayFrames = cv2_to_cmu_frames(app.cap)
         app.replaying = True
     if key == 'n' and app.allDots == []:
@@ -193,6 +295,9 @@ def onKeyPress(app, key):
         app.counter = 0
         app.allDots.extend(app.dots)
         app.dots = []
+    if key == 'b' and (app.replaying or app.recorded and app.useVideo) and app.counter != 0:
+        app.dots.pop()
+        app.counter -= 1
     if key == 'd' and not app.keyPointsFilled and app.replaying and app.counter == 4:
         app.keyPointsFilled = True
     if key == 'd' and app.useVideo and app.counter == 4:
@@ -205,20 +310,36 @@ def onKeyPress(app, key):
     
 def onMousePress(app, mouseX, mouseY):
     
-    if not app.live and not app.useVideo:
-        if app.importRectX - app.greenRectWidth / 2 < mouseX < app.importRectX + app.greenRectWidth / 2 and app.importRectY - app.greenRectHeight / 2 < mouseY < app.importRectY + app.greenRectHeight / 2:
-            temp = new()
-            app.importedFile = fileFilter(temp)
-            app.useVideo = True
-            
-        elif app.liveRectX - app.greenRectWidth / 2 < mouseX < app.liveRectX + app.greenRectWidth / 2 and app.liveRectY - app.greenRectHeight / 2 < mouseY < app.liveRectY + app.greenRectHeight / 2:
-            app.live = True
-    if app.counter != 4 and not app.keyPointsFilled and app.recorded:
+    if app.counter != 4 and not app.keyPointsFilled and app.recorded and not app.wantToOpen:
         app.dots.append((mouseX, mouseY))
         app.counter += 1
-        
     
+    # if :
+    if app.wantToOpen and 735 - 800 / 2 < mouseX < 735 + 800 / 2 and 100 - 691 / app.length / 2 < mouseY < 100 + 691 / app.length / 2:
         
+        app.importedFile = fileFilter(app.mp4List[0])
+        app.useVideo = True
+        app.recorded = True
+        app.wantToOpen = False
+    if app.wantToOpen and 735 - 800 / 2 < mouseX < 735 + 800 / 2 and 100 + (691 / app.length) < mouseY < 100 + (691 / app.length) * app.length:
+        app.importedFile = fileFilter(app.mp4List[int(mouseY // (691 / app.length))])
+        app.useVideo = True
+        app.recorded = True
+        app.wantToOpen = False
+        
+    if (app.wantToOpen or app.helpOpen) and app.redBackX < mouseX < app.redBackX + app.redBackWidth and app.redBackY < mouseY < app.redBackY + app.redBackHeight:
+        app.wantToOpen = False
+        app.helpOpen = False
+    if not app.live and not app.useVideo:
+        if app.importRectX - app.greenRectWidth / 2 < mouseX < app.importRectX + app.greenRectWidth / 2 and app.importRectY - app.greenRectHeight / 2 < mouseY < app.importRectY + app.greenRectHeight / 2:
+            gatherMP4Files(app)
+            app.wantToOpen = True
+        elif app.liveRectX - app.greenRectWidth / 2 < mouseX < app.liveRectX + app.greenRectWidth / 2 and app.liveRectY - app.greenRectHeight / 2 < mouseY < app.liveRectY + app.greenRectHeight / 2:
+            app.live = True
+        elif app.helpX - app.helpWidth / 2 < mouseX < app.helpX + app.helpWidth and app.helpY - app.helpHeight / 2 < mouseY < app.helpY + app.helpHeight / 2:
+            app.helpOpen = True
+    
+
 def cv2ToPilFrames(app, video_path):
     cap = cv2.VideoCapture(video_path)
     frames = []
@@ -268,7 +389,7 @@ def algorithm(app, listPoints):
         bottomRightList.append(bottomRight)
         
     # Actual algorithm (looking for a slight arc in, back to impact/original location, then arc in)
-    app.overallScore = (algHelper(topLeftList, 0) + algHelper(bottomLeftList, 1) + algHelper(topRightList, 2) + algHelper(bottomRightList, 3)) / 4
+    app.overallScore = (algHelper(app, topLeftList, 0) + algHelper(app, bottomLeftList, 1) + algHelper(app, topRightList, 2) + algHelper(app, bottomRightList, 3)) / 4
     app.algorithmCalculated = True
     
         
@@ -278,7 +399,7 @@ def sortByX(point):
 def sortByY(point):
     return point[1]
 
-def algHelper(coordinates, cycle):
+def algHelper(app, coordinates, cycle):
     # print(coordinates)
     xCoordinates = []
     yCoordinates = []
@@ -337,7 +458,7 @@ def algHelper(coordinates, cycle):
     postImpactArcConsistency = arcConsistency(xCoordinates[:impactPointIndex], yCoordinates[:impactPointIndex])
     preImpactArcConsistency = arcConsistency(xCoordinates[impactPointIndex:], yCoordinates[impactPointIndex:])
 
-    overallArcConsistency = 100 - abs(postImpactArcConsistency - preImpactArcConsistency) # Work in progress
+    overallArcConsistency = 100 - abs(postImpactArcConsistency - preImpactArcConsistency) 
     
     setupCoords = coordinates[0]
     impactSetupEuclidean = np.sqrt((setupCoords[0] - impactPointCoords[0])**2 + (setupCoords[1] - impactPointCoords[1])**2)
@@ -351,6 +472,23 @@ def algHelper(coordinates, cycle):
 
     # prePostImpactComparison = np.mean(np.abs(preImpactPathInterp(commonX) - postImpactPathInterp(commonX)))
     # prePostImpactComparisonScore = 100 - prePostImpactComparison * 0.12
+    if cycle == 0:
+        app.postImpactArcTL = postImpactArcConsistency
+        app.preImpactArcTL = preImpactArcConsistency
+        app.impactSetupComparisonTL = impactSetupComparisonScore
+    elif cycle == 1:
+        app.postImpactArcBL = postImpactArcConsistency
+        app.preImpactArcBL = preImpactArcConsistency
+        app.impactSetupComparisonBL = impactSetupComparisonScore
+    elif cycle == 2:
+        app.postImpactArcTR = postImpactArcConsistency
+        app.preImpactArcTR = preImpactArcConsistency
+        app.impactSetupComparisonTR = impactSetupComparisonScore
+    elif cycle == 3:
+        app.postImpactArcBR = postImpactArcConsistency
+        app.preImpactArcBR = preImpactArcConsistency
+        app.impactSetupComparisonBR = impactSetupComparisonScore
+
     print(postImpactArcConsistency)
     print(preImpactArcConsistency)
     print(overallArcConsistency)
@@ -368,23 +506,41 @@ def findImpactPoint(coordinates): #debugged
         if y < setupY and i > 0.55 * len(coordinates):
             return coordinates[i]
 
-def new():
-    filePath = subprocess.check_output(["osascript", "-e", 'choose file']).decode("utf-8").strip()
-    return filePath
+def gatherMP4Files(app):
+    path = os.getcwd() 
+    dirList = os.listdir(path) 
+
+    mp4List = []
+    for file in dirList:
+        if file[-4:] == '.mp4':
+            mp4List.append(file)
+    app.length = len(mp4List)
+    app.mp4List = mp4List
+
   
 def fileFilter(file):
-    counter = 0
-    result = ''
-    for line in file.split(':'):
-        if counter == 0:
-            counter += 1
-            result += '/'
-            continue
-        else:
-            result = result + line + '/'
-    return result[:-1]
+    path = os.getcwd() 
+    temp = str(path) + '/' + str(file) +'/'
+    return temp
 
+
+def copyVideo(app, inputPath, outputPath):
+    originalCap = cv2.VideoCapture(inputPath)
+    
+    out = cv2.VideoWriter(outputPath, app.fourcc, 20.0, app.frame_size)
+    
+    while True:
+        ret, frame = originalCap.read()
+        if not ret: 
+            break
+        out.write(frame)
+    
+    originalCap.release()
+    out.release
+    
 def reset(app):
+    app.bgPILImage = (Image.open(urlopen('https://www.hjgt.org/wp-content/uploads/2024/02/Putting.jpg')))
+    app.bgImage = CMUImage(app.bgPILImage.resize((1470, 891)))
     app.capLive = cv2.VideoCapture(0)
     app.importedFile = None
     app.capImport = cv2.VideoCapture(app.importedFile)
@@ -430,9 +586,38 @@ def reset(app):
     app.liveRectX = 1102
     app.liveRectY = 540
     
-    
+    app.redBackX = 70
+    app.redBackY = 750
+    app.redBackWidth = 225
+    app.redBackHeight = 100
     
     app.overallScore = None
     app.algorithmCalculated = False
+    app.ratingColor = None
+    
+    app.count = 0
+    
+    app.length = None
+    app.mp4List = None
+    app.wantToOpen = False
+    app.panelOpened = False
+    app.chosen = False
+    app.helpOpen = False
         
+    app.postImpactArcTL = None
+    app.postImpactArcBL = None
+    app.postImpactArcTR = None
+    app.postImpactArcBR = None
+    
+    
+    app.preImpactArcTL = None
+    app.preImpactArcBL = None
+    app.preImpactArcTR = None
+    app.preImpactArcBR = None
+    
+    app.impactSetupComparsonTL = None
+    app.impactSetupComparsonBL = None
+    app.impactSetupComparsonTR = None
+    app.impactSetupComparsonBR = None
+    
 runApp(width=1470, height=891)
