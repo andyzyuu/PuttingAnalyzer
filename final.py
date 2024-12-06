@@ -21,6 +21,7 @@ from urllib.request import urlopen
 # from scipy.interpolate import interp1d
 import numpy as np
 
+
 def onAppStart(app):
     app.bgPILImage = (Image.open(urlopen('https://www.hjgt.org/wp-content/uploads/2024/02/Putting.jpg')))
     app.bgImage = CMUImage(app.bgPILImage.resize((1470, 891)))
@@ -37,7 +38,7 @@ def onAppStart(app):
     
     app.frames = []
     app.currentFrameIndex = 0
-    app.frameDelay = 100  # Milliseconds between frame changes
+    app.frameDelay = 1  # Milliseconds between frame changes
     app.stepsPerSecond = 1000 // app.frameDelay
     app.videoPath = None
     app.pilFrames = None
@@ -60,7 +61,7 @@ def onAppStart(app):
     # fourcc = cv2.VideoWriter_fourcc(*'XVID')
     # out = cv2.VideoWriter('output.avi', fourcc, 30.0, frame_size)
     app.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    app.out = cv2.VideoWriter('finalOutput.mp4', app.fourcc, 20.0, app.frame_size)
+    app.out = cv2.VideoWriter('finalOutput.mp4', app.fourcc, 3.0, app.frame_size)
     
     app.importRectX = 367
     app.importRectY = 540
@@ -128,13 +129,20 @@ def onStep(app):
         
     if app.replaying == True and app.copied == False:
         app.videoPath = "/Users/andy/Term Project/finalOutput.mp4"
+        tempCap = cv2.VideoCapture(app.videoPath)
+        fps = tempCap.get(cv2.CAP_PROP_FPS) 
+        print('FPS: ' + str(fps))
         app.pilFrames = cv2ToPilFrames(app, app.videoPath)
         app.frameCount = int(cv2.VideoCapture("/Users/andy/Term Project/finalOutput.mp4").get(cv2.CAP_PROP_FRAME_COUNT))
+        print(app.frameCount)
         for frame in app.pilFrames:
             app.frames.append(CMUImage(frame))
+            cv2.waitKey(int(1000 / 30))
             app.copied = True
  
     if app.recording == True:
+        # cv2.waitKey(int(1000 / 30))
+        
         app.out.write(frame)
     if app.keyPointsFilled == True and app.algorithmCalculated == False:
         algorithm(app, app.allDots)
@@ -151,7 +159,7 @@ def onStep(app):
 def redrawAll(app):
     if not app.live and not app.useVideo and not app.wantToOpen:
         drawImage(app.bgImage, 0, 445, align='left')
-        drawLabel("Welcome to Putting Analysis", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+        drawLabel("Welcome to Putting Analyzer", 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
         drawRect(app.importRectX, app.importRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
         drawRect(app.liveRectX, app.liveRectY, app.greenRectWidth, app.greenRectHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
         drawRect(app.helpX, app.helpY, app.helpWidth, app.helpHeight, fill='green', align='center', border='lightgreen', borderWidth=1.5)
@@ -162,9 +170,9 @@ def redrawAll(app):
       
     if app.helpOpen: 
         drawRect(0, 0, 1470, 891, fill='darkgreen')
-        drawLabel('Putting Analysis FAQ', 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
-        drawLabel('Q: How to use Putting Analysis?', 22, 80, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
-        drawLabel('A: Using either imported files from the same file directory or using a live webcam, with the camera angled slightly down and ___ inches above the ground,', 735, 120, size=21, border='white', borderWidth=1.5)
+        drawLabel('Putting Analyzer FAQ', 735, 30, font='montserrat', size=42, border='white', borderWidth=1.5)
+        drawLabel('Q: How to use Putting Analyzer?', 22, 80, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
+        drawLabel('A: Using either imported files from the same file directory or using a live webcam, with the camera angled slightly down and 18-24 inches above the ground,', 735, 120, size=21, border='white', borderWidth=1.5)
         drawLabel('and record your putting stroke. After, using your mouse, attach keypoints on the 4 corners of your putter head, doing it frame by frame until the video', 735, 150, size=21, border='white', borderWidth=1.5)
         drawLabel('ends or when the stroke has ended, and your final rating will be outputted, from a rating of 0 to 100.', 735, 180, size=21, border='white', borderWidth=1.5)
         drawLabel('Q: How does the algorithm work?', 22, 240, font='montserrat', size=42, border='white', borderWidth=2.5, bold=True, align='left')
@@ -240,7 +248,7 @@ def redrawAll(app):
         drawCircle(800, 185, 145, fill=app.ratingColor, opacity=50, border='black', borderWidth=1)
         drawLabel(f"{app.overallScore}", 800, 185, font='montserrat', size=95, border=app.ratingColor, borderWidth=1.7, bold=True)
         if app.impactSetupComparisonTL < 40 or app.impactSetupComparisonBL < 40 or app.impactSetupComparisonTR < 40 or app.impactSetupComparisonBR < 40 and impactFeedback == None:
-            impactFeedback = 'very poor, and we would suggest to make sure you are hitting the ball in the middle of the putter face.'
+            impactFeedback = 'poor, and we suggest to make sure you are hitting the ball in the middle of the face.'
         elif app.impactSetupComparisonTL < 75 or app.impactSetupComparisonBL < 75 or app.impactSetupComparisonTR < 75 or app.impactSetupComparisonBR < 75 and impactFeedback == None:
             impactFeedback = 'mediocre, and we would suggest to look at your impact position.'
         elif app.impactSetupComparisonTL < 100 or app.impactSetupComparisonBL < 100 or app.impactSetupComparisonTR < 100 or app.impactSetupComparisonBR < 100 and impactFeedback == None:
@@ -284,11 +292,17 @@ def onKeyPress(app, key):
         copyVideo(app, "/Users/andy/Term Project/finalOutput.mp4", "/Users/andy/Term Project/previousRecording.mp4")
         # app.replayFrames = cv2_to_cmu_frames(app.cap)
         app.replaying = True
-    if key == 'n' and app.allDots == []:
+    if key == 'n' and app.allDots == [] and app.useVideo and app.importedFile != "/Users/andy/Term Project/previousRecording.mp4/":
+        print('!!!!')
+        print(app.importedFile)
         app.currentFrameIndex += app.frameInterval
-    if key == 'n' and ((app.replaying and app.counter == 4) or (app.recorded and app.useVideo == True and app.counter == 4)):
-        if app.currentFrameIndex < len(app.frames) - app.frameInterval:
+    if key == 'n' and app.allDots == [] and (app.live or app.importedFile == "/Users/andy/Term Project/previousRecording.mp4/"):
+        app.currentFrameIndex += 1
+    if key == 'n' and ((app.replaying and app.counter == 4) or (app.recorded and (app.useVideo == True or app.live) and app.counter == 4)):
+        if app.currentFrameIndex < len(app.frames) - app.frameInterval and app.useVideo and app.importedFile != "/Users/andy/Term Project/previousRecording.mp4/":
             app.currentFrameIndex += app.frameInterval
+        elif app.currentFrameIndex < len(app.frames) - app.frameInterval and (app.live or app.importedFile == "/Users/andy/Term Project/previousRecording.mp4/"):
+            app.currentFrameIndex += 1
         else:
             app.currentFrameIndex = len(app.frames) - 1
             app.keyPointsFilled = True
@@ -300,7 +314,7 @@ def onKeyPress(app, key):
         app.counter -= 1
     if key == 'd' and not app.keyPointsFilled and app.replaying and app.counter == 4:
         app.keyPointsFilled = True
-    if key == 'd' and app.useVideo and app.counter == 4:
+    if key == 'd' and (app.useVideo or app.live) and app.counter == 4:
         app.dots = []
         app.keyPointsFilled = True
     if key == 'x' and app.keyPointsFilled:
